@@ -1,0 +1,82 @@
+// src/styles/bootstrap.scss
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+.grid-container {
+  height: auto;
+  width: 800px;
+  background-color: #fff;
+  display: grid;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  grid-template-columns: 1.75fr 5fr;
+
+}
+.grid-container1 {
+  height: auto;
+  width: 500px;
+  background-color: #fff;
+  display: grid;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  grid-template-columns: 2fr 1fr;
+
+}
+
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.left-column {
+  grid-column: 1;
+}
+
+.right-column {
+  grid-column: 2;
+}
+
+input, textarea {
+  margin-bottom: 15px; /* Spacing between form elements */
+  padding: 8px;
+  font-size: 16px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.btn-custom {
+  height: 89px; /* Adjust the height */
+  width: 89px;
+  border-radius: 12%;
+  margin-left: 25px;
+  padding: 0 20px; /* Adjust padding if needed */
+  font-size: 16px; /* Adjust font size if needed */
+}
+body{
+  margin: 0;
+}
+
+.nav-container {
+  background-color: aqua;
+  border: 0;
+  height: auto;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  .mini-sec{
+    height: 60%;
+    display: flex;
+
+    flex-direction: column;
+    justify-content: space-evenly;
+
+  }
+}
