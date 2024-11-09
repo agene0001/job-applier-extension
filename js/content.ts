@@ -206,7 +206,7 @@ class DocFormatter {
                     education: this.formatEducation(resumeData.education),
                     employment: this.formatEmployment(resumeData.employment),
                 },
-                cmdDelimiter: ['{{', '}}'], // Adjust delimiters if needed
+                cmdDelimiter: ['{', '}'], // Adjust delimiters if needed
             });
 
             // Generate blob for Google Drive upload
