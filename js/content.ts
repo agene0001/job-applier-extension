@@ -3,6 +3,7 @@ import {Education, Employment, ResumeData,DriveUploadResponse} from '../src/type
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import { GoogleAPIService } from './gapi-service';
+import createReport from "docx-templates";
 
 declare const chrome: any; // Declare chrome as a global variable for Chrome APIs
 dotenv.config();
@@ -149,7 +150,7 @@ class DocFormatter {
     // `${job.jobTitle} at ${job.company}, ${job.location} (${job.jStart} - ${job.jEnd}): ${job.info.join(', ')}`
 
 
-    public loadResume(resumeFilePath: string): Promise<PizZip> {
+    public loadResume(resumeFilePath: string): Promise<Uint8Array> {
         const fullPath = chrome.runtime.getURL(resumeFilePath);
 
         return new Promise((resolve, reject) => {
@@ -161,7 +162,7 @@ class DocFormatter {
                 if (xhr.status === 200) {
                     const arrayBuffer = xhr.response;
                     const uint8Array = new Uint8Array(arrayBuffer);
-                    resolve(new PizZip(uint8Array));
+                    resolve(uint8Array); // Return Uint8Array directly
                 } else {
                     reject(new Error(`Failed to load the resume file. Status: ${xhr.status}`));
                 }
@@ -175,62 +176,56 @@ class DocFormatter {
         });
     }
 
+
     public async saveResume(
-        zip: PizZip,
-        // outputFilePath: string,
-        resumeData: ResumeData
-        , companyName:string,jobTitle:string,
+        templateArrayBuffer: Uint8Array,
+        resumeData: ResumeData,
+        companyName: string,
+        jobTitle: string
     ): Promise<DriveUploadResponse> {
         try {
-            // Create document
-            const doc = new Docxtemplater(zip, {
-                paragraphLoop: true,
-                linebreaks: true
+            // Convert Uint8Array to Buffer
+            const templateBuffer = Buffer.from(templateArrayBuffer);
 
-            });
-            const len = resumeData.skills.length
-            // Render the document
-            doc.render({
-                name: resumeData.name,
-                address: resumeData.address,
-                email: resumeData.email,
-                website: resumeData.website,
-                phone: resumeData.phone,
-                intro: resumeData.intro,
-                skills1: resumeData.skills.slice(0,len/2).join(', '),
-                skills2: resumeData.skills.slice(len/2,len).join(', '),
-                education: this.formatEducation(resumeData.education),
-                employment: this.formatEmployment(resumeData.employment),
-            });
+            const date = new Date(Date.now());
+            const formattedDate = `${date.getMonth() + 1}-${date.getDate()}-${date.getFullYear()}`;
+            const fileName = `${jobTitle.toLowerCase().replace(/\s+/g, '')}-${companyName.toLowerCase().replace(/\s+/g, '')}-${formattedDate}.docx`;
 
-            // Generate blob
-            const blob = doc.getZip().generate({
-                type: 'blob',
-                compression: 'DEFLATE',
+            // Create the report using docx-templates
+            const reportBuffer = await createReport({
+                template: templateBuffer,
+                data: {
+                    name: resumeData.name,
+                    address: resumeData.address,
+                    email: resumeData.email,
+                    website: resumeData.website,
+                    phone: resumeData.phone,
+                    intro: resumeData.intro,
+                    skills1: resumeData.skills.slice(0, resumeData.skills.length / 2).join(', '),
+                    skills2: resumeData.skills.slice(resumeData.skills.length / 2).join(', '),
+                    education: this.formatEducation(resumeData.education),
+                    employment: this.formatEmployment(resumeData.employment),
+                },
+                cmdDelimiter: ['{{', '}}'], // Adjust delimiters if needed
             });
 
-            // Get or create resumes folder
-            // const folderId = await DriveService.getResumesFolderId();
-            const resumesFolderId = await DriveService.getResumesFolderId();
-            const date = new Date(Date.now())
-            // const jobFolderId = await DriveService.createOrGetFolder(`${jobTitle}-${companyName}-${date.getMonth()}-${date.getDate()}-${date.getFullYear()}`, resumesFolderId);
-            // console.log(`Folder for "${jobTitle}" created or retrieved with ID: ${jobFolderId}`);
+            // Generate blob for Google Drive upload
+            const blob = new Blob([reportBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            });
 
             // Upload to Drive
-            const uploadResponse = await DriveService.uploadFile(
-                blob,
-                `${jobTitle.toLowerCase().replace(" ","")}-${companyName.toLowerCase().replace(" ","")}-${date.getMonth()}-${date.getDate()}-${date.getFullYear()}`,
-                resumesFolderId
-            );
+            const resumesFolderId = await DriveService.getResumesFolderId();
+            const uploadResponse = await DriveService.uploadFile(blob, fileName, resumesFolderId);
 
             console.log('Resume uploaded successfully:', uploadResponse.webViewLink);
             return uploadResponse;
-
         } catch (error) {
             console.error('Error saving resume:', error);
             throw new Error(`Failed to save resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
+
 }
 // Example usage
 const resumeFilePath = './jobApplier/resume_template.docx'; // Ensure the path is correct
@@ -279,7 +274,23 @@ const outputFilePath = 'updated_resume.docx'; // Path to save the updated resume
         const companyName = "xyz co"
         // Generate the document and upload it to Google Drive, get the file URL
         const zip = await resumeFormater.loadResume(resumeFilePath);
-        const uploadResponse = await resumeFormater.saveResume(zip, resumeData,companyName,jobTitle);
+        const reportBuffer = await createReport({
+            template: zip,
+            data: {
+                name: resumeData.name,
+                address: resumeData.address,
+                email: resumeData.email,
+                website: resumeData.website,
+                phone: resumeData.phone,
+                intro: resumeData.intro,
+                skills1: resumeData.skills.slice(0, resumeData.skills.length / 2).join(', '),
+                skills2: resumeData.skills.slice(resumeData.skills.length / 2).join(', '),
+                education: resumeFormater.formatEducation(resumeData.education),
+                employment: resumeFormater.formatEmployment(resumeData.employment),
+            },
+            cmdDelimiter: ['{', '}'], // Assuming the template uses {{tag}} syntax
+        });
+        const uploadResponse = await resumeFormater.saveResume(reportBuffer, resumeData,companyName,jobTitle);
         // const jobTitle = 'Software Developer'; // Replace with the actual job title
         // const resumesFolderId = await DriveService.getResumesFolderId();
         // const jobFolderId = await DriveService.createOrGetFolder(jobTitle, resumesFolderId);
