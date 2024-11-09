@@ -3,41 +3,12 @@ import Navbar from "./navbar";
 import UploadDoc from "./FileUploader";
 import { Page } from './App';
 import LZString from 'lz-string';
-
-interface CreateProfileProps {
+import {ResumeData} from "./types"
+export interface CreateProfileProps {
     setCurrentPage: React.Dispatch<React.SetStateAction<Page>>;
 }
 
-interface Employment {
-    jobTitle: string;
-    company: string;
-    location: string;
-    jStart: string;
-    jEnd: string;
-    info: string[];
-}
 
-interface Education {
-    college: string;
-    edStart: string;
-    edEnd: string;
-    degrees: string[];
-    edInfo: string;  // Changed from string[] to string
-    extraInfo: string[];
-}
-
-interface ResumeData {
-    name: string;
-    address: string;
-    email: string;
-    website: string;
-    phone: string;
-    educationInfo: Education[];
-    experience: string;
-    skills: string[];
-    intro: string;
-    employment: Employment[];
-}
 
 const initialState: ResumeData = {
     name: '',
@@ -45,8 +16,7 @@ const initialState: ResumeData = {
     email: '',
     website: '',
     phone: '',
-    educationInfo: [],
-    experience: '',
+    education: [],
     skills: [],
     intro: '',
     employment: [],
@@ -100,8 +70,26 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
 
     const saveProfile = () => {
         if (profileName.trim() === '') {
-            alert('Please enter a name for the profile.');
-            return;
+            if(selectedProfileName !== ""){
+                const existingProfileIndex = savedProfiles.findIndex(profile => profile.profileName === selectedProfileName);
+                if (existingProfileIndex !== -1) {
+                    const updatedProfiles = savedProfiles.map((profile, index) => index === existingProfileIndex ? {
+                        profileName: selectedProfileName,
+                        profileData: resumeData
+                    } : profile);
+                    setSavedProfiles(updatedProfiles);
+                    chrome.storage.sync.set({profiles: updatedProfiles}, () => {
+                        console.log('Profile updated in Chrome storage.');
+                    });
+                    setSelectedProfileName('');
+                    setResumeData(initialState);
+                    return;
+                }
+            }
+            else {
+                alert('Please enter a name for the profile.');
+                return;
+            }
         }
 
         const existingProfile = savedProfiles.find(profile => profile.profileName === profileName);
@@ -121,7 +109,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
 
     const handleEducationChange = (index: number, e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        const updatedEducationInfo = [...resumeData.educationInfo];
+        const updatedEducationInfo = [...resumeData.education];
 
         if (name === 'degrees') {
             if (e.target instanceof HTMLInputElement) {
@@ -131,18 +119,18 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
                 };
                 setResumeData(prevState => ({
                     ...prevState,
-                    educationInfo: updatedEducationInfo
+                    education: updatedEducationInfo
                 }));
             }
         } else if (name === 'edInfo') {
             if (e.target instanceof HTMLTextAreaElement) {
                 edInfoCursors.current[index] = e.target.selectionStart;
                 updatedEducationInfo[index] = {
-                    ...updatedEducationInfo[index], edInfo: value  // Store directly as a string
+                    ...updatedEducationInfo[index], edInfo: [value]  // Store directly as a string
                 };
                 setResumeData(prevState => ({
                     ...prevState,
-                    educationInfo: updatedEducationInfo
+                    education: updatedEducationInfo
                 }));
             }
         } else {
@@ -152,7 +140,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
             };
             setResumeData(prevState => ({
                 ...prevState,
-                educationInfo: updatedEducationInfo
+                education: updatedEducationInfo
             }));
         }
     };
@@ -162,7 +150,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
         if (degreesRef.current && degreesCursor !== null) {
             degreesRef.current.setSelectionRange(degreesCursor, degreesCursor);
         }
-    }, [resumeData.educationInfo, degreesCursor]);
+    }, [resumeData.education, degreesCursor]);
 
     useEffect(() => {
         // Set the cursor position in each edInfo textarea if the ref is available and a position is set.
@@ -176,7 +164,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
                 }
             });
         }
-    }, [resumeData.educationInfo]);
+    }, [resumeData.education]);
 
     const handleEmploymentChange = (index: number, e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -199,7 +187,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
     };
 
     const handleFileUpload = (index: number, files: { fileName: string, fileContent: string }[]) => {
-        const updatedEducationInfo = [...resumeData.educationInfo];
+        const updatedEducationInfo = [...resumeData.education];
         updatedEducationInfo[index].extraInfo = files.map(file => file.fileName);
 
         // Compress the file contents
@@ -217,14 +205,30 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
 
         setResumeData(prevState => ({
             ...prevState,
-            educationInfo: updatedEducationInfo
+            education: updatedEducationInfo
         }));
+    };
+    const handleFileDelete = (file: string,educationIndex: number) => {
+
+        chrome.storage.local.remove(file, () => {
+            console.log(`${file} deleted from Chrome local storage.`);
+        });
+        setResumeData(prevState => {
+            const updatedEducationInfo = [...prevState.education];
+            updatedEducationInfo[educationIndex].extraInfo = updatedEducationInfo[educationIndex].extraInfo?.filter(f => f !== file);
+
+            return {
+                ...prevState,
+                education: updatedEducationInfo
+            };
+        });
+
     };
 
     const addEducation = () => {
         setResumeData(prevState => ({
             ...prevState,
-            educationInfo: [...prevState.educationInfo, { college: '', edStart: '', edEnd: '', degrees: [], edInfo: '', extraInfo: [] }]
+            education: [...prevState.education, { college: '', edStart: '', edEnd: '', degrees: [], edInfo: [], extraInfo: [] }]
         }));
     };
 
@@ -244,10 +248,10 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
     };
 
     const deleteEducation = (index: number) => {
-        const updatedEducationInfo = resumeData.educationInfo.filter((_, i) => i !== index);
+        const updatedEducationInfo = resumeData.education.filter((_, i) => i !== index);
         setResumeData(prevState => ({
             ...prevState,
-            educationInfo: updatedEducationInfo
+            education: updatedEducationInfo
         }));
     };
 
@@ -274,6 +278,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
         setResumeData(initialState);
     };
 
+    // @ts-ignore
     return (
         <div className='grid-container'>
             <Navbar title='createpage' setCurrentPage={setCurrentPage} />
@@ -356,7 +361,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
 
                 <div className='right-column'>
                     <h3>Education</h3>
-                    {resumeData.educationInfo.map((education, index) => (
+                    {resumeData.education.map((education, index) => (
                         <div key={index}>
                             <input
                                 type='text'
@@ -390,13 +395,14 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
                             />
                             <div>
                                 <h4>Uploaded Files:</h4>
-                                {education.extraInfo.length > 0 ? (
+                                {education.extraInfo && education.extraInfo.length > 0 ? (
                                     <ul>
-                                        {education.extraInfo.map((fileName, idx) => (
-                                            <li key={idx}>{fileName}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
+                                        {education.extraInfo.map((fileName, idx) => (<li key={idx}>
+                                                {fileName}
+                                                <button onClick={() => handleFileDelete(fileName,index)}>Remove</button>
+
+                                            </li>))}
+                                    </ul>) : (
                                     <p>No files uploaded.</p>
                                 )}
                             </div>

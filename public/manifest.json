@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "My React Chrome Extension",
+  "description": "automatic job applier",
+  "version": "1.0",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/*",
+        "https://www.indeed.com/*",
+        "https://www.joinhandshake.com/*"
+      ],
+      "js": ["content.js"],
+      "type": "module"
+    }
+  ],
+  "content_security_policy": {
+    "script-src": ["'self'", "https://apis.google.com"],
+    "object-src": "'self'"
+  },
+  "web_accessible_resources": [{
+    "resources": ["jobApplier/resume_template.docx"],
+    "matches": ["<all_urls>"]
+  }],
+  "oauth2": {
+    "client_id": "946969833581-k6f8u9vrlfr0lv6d50qmu38o96g4cnm1.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive"
+    ]
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "downloads",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://apis.google.com/"
+  ]
+}

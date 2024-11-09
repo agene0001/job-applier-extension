@@ -1,7 +1,39 @@
-// import OpenAI from "/openai";
-// const openai = new OpenAI();
+export{}
+let accessToken: string | undefined;
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'GET_AUTH_TOKEN') {
+        getAuthToken().then(token => {
+            sendResponse({ token });
+        }).catch(error => {
+            console.error('Error getting auth token:', error);
+            sendResponse({ error: error.message });
+        });
+        return true; // Required for async response
+    }
+});
 
+async function getAuthToken(): Promise<string> {
+    if (accessToken) {
+        return accessToken;
+    }
+
+    return new Promise((resolve, reject) => {
+        chrome.identity.getAuthToken({ interactive: true }, (token) => {
+            if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+                return;
+            }
+            accessToken = token;
+            if(token)
+            chrome.storage.sync.set({ accessToken }, () => {
+                return resolve(token);
+            });
+
+        });
+
+    });
+}
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "openJobSite") {
         const site = request.site;
@@ -15,12 +47,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 break;
 
             case "indeed":
-                // Logic for Indeed (define the URL as needed)
                 url = "https://www.indeed.com"; // Example URL
                 break;
 
             case "handshake":
-                // Logic for Handshake (define the URL as needed)
                 url = "https://www.joinhandshake.com"; // Example URL
                 break;
 
@@ -32,15 +62,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Create a new tab and send a message to the content script once it's loaded
         chrome.tabs.create({ url, active: true }, function (tab) {
             if (tab && tab.id !== undefined) {
-                // Create a listener for when the tab is updated
-                const listener = (tabId, changeInfo) => {
+                const listener = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
                     if (tabId === tab.id && changeInfo.status === 'complete') {
                         chrome.tabs.onUpdated.removeListener(listener);
                         chrome.tabs.sendMessage(tabId, { action: "runContentScript" });
                     }
                 };
-
-                // Add the listener to detect tab updates
                 chrome.tabs.onUpdated.addListener(listener);
             } else {
                 console.error("Failed to create a tab or tab ID is undefined.");

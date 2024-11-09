@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import HomePage from './homepage';
-import CreateProfile from './CreateProfile';
+import Createprofile from './createprofile';
 import UploadDoc from './FileUploader';
 // import AppliedJobs from './AppliedJobs'; // Assume you have this component
 
@@ -14,7 +14,7 @@ const App: React.FC = () => {
             case 'home':
                 return <HomePage setCurrentPage={setCurrentPage} />;
             case 'create-profile':
-                return <CreateProfile setCurrentPage={setCurrentPage} />;
+                return <Createprofile setCurrentPage={setCurrentPage} />;
             case 'applied-jobs':
                 break;
             // return <AppliedJobs setCurrentPage={setCurrentPage} />;
