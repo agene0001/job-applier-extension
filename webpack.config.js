@@ -58,7 +58,7 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                { from: "./public/manifest.json", to: ""},{ from: "./js/jobApplier", to: "jobApplier"},  // Copy manifest to root of 'dist'
+                { from: "./public/manifest.json", to: ""},{ from: "./public/jobApplier", to: "jobApplier"},  // Copy manifest to root of 'dist'
                 // { from: "./public/static", to: "static" },  // Copy static assets if needed
             ],
         }),
