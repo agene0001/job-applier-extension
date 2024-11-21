@@ -38,11 +38,16 @@
     "storage",
     "tabs",
     "activeTab",
+    "webRequest",
     "scripting",
     "downloads",
-    "identity"
+    "identity",
+    "cookies"
   ],
   "host_permissions": [
+    "https://www.googleapis.com/*",
     "https://apis.google.com/"
-  ]
+  ],
+  "incognito": "spanning"
+
 }

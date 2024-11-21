@@ -26,6 +26,8 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage }) => {
     const [savedProfiles, setSavedProfiles] = useState<{ profileName: string; profileData: ResumeData }[]>([]);
     const [selectedProfileName, setSelectedProfileName] = useState<string>('');
     const [resumeData, setResumeData] = useState<ResumeData>(initialState);
+    const [experienceLevel, setExperienceLevel] = useState<string[]>([]);
+    const [queryJob, setQueryJob] = useState<string>("");
     useEffect(() => {
         chrome.storage.sync.get(['profiles'], (result) => {
             if (result.profiles) {
@@ -34,8 +36,10 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage }) => {
         });
     }, []);
     function pageClick(site: string) {
-        if(selectedProfileName!=="") chrome.runtime.sendMessage({ action: "openJobSite", site,name: selectedProfileName });
-        else alert("Profile must be selected.");
+        if(selectedProfileName!==""&&queryJob!=="") {
+            chrome.runtime.sendMessage({action: "openJobSite", site, name: selectedProfileName, pageInd: 0,query: queryJob,xpLevel: experienceLevel});
+        }
+        else alert("Profile must be selected and must have query job.");
     }
     const handleProfileSelect = async (e: ChangeEvent<HTMLSelectElement>) => {
         const selectedProfileName = e.target.value;
@@ -72,14 +76,32 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage }) => {
                         <option key={index} value={profile.profileName}>{profile.profileName}</option>))}
                 </select>
                 <label>Apply (please have window in full screen)</label>
+                <label htmlFor="experience">Choose an experience option option:</label>
+                <select multiple id="experience" name="options"
+                        onChange={(event) => {
+                    const selectedValues = Array.from(event.target.selectedOptions, (option) => option.value);
+                    setExperienceLevel(selectedValues); // Update state with selected values
+                }} value={experienceLevel}>
+                    <option value="" disabled selected>Select an option</option>
+                    <option value="1">Internship</option>
+                    <option value="2">Entry Level</option>
+                    <option value="3">Associate</option>
+                    <option value="4">Mid-Senior Level</option>
+                    <option value="5">Director</option>
+                    <option value="6">Executive</option>
+                </select>
                 <div className='job-board-section'>
                     <button className='btn btn-primary' onClick={() => pageClick("linkedin")}>LinkedIn</button>
                     <button className='btn btn-primary' onClick={() => pageClick("indeed")}>Indeed</button>
                     <button className='btn btn-primary' onClick={() => pageClick("handshake")}>Handshake</button>
                 </div>
+                <div>
+                    <label htmlFor="jobSearch">Search Jobs</label>
+                    <input id="jobSearch" type='text' required placeholder='Search by job name'
+                           onChange={e => setQueryJob(e.target.value)}/>
+                </div>
             </div>
-        </div>
-    );
+        </div>);
 };
 
 export default HomePage;

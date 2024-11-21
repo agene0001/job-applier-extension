@@ -34,6 +34,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
     useEffect(() => {
         chrome.storage.sync.get(['profiles'], (result) => {
             if (result.profiles) {
+                console.log(result.profiles)
                 setSavedProfiles(result.profiles);
             }
         });
@@ -228,7 +229,23 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
     const addEducation = () => {
         setResumeData(prevState => ({
             ...prevState,
-            education: [...prevState.education, { college: '', edStart: '', edEnd: '', degrees: [], edInfo: [], extraInfo: [] }]
+            education: Array.isArray(prevState.education)
+                ? [...prevState.education, {
+                    college: '',
+                    edStart: '',
+                    edEnd: '',
+                    degrees: [],
+                    edInfo: [],
+                    extraInfo: []
+                }]
+                : [{
+                    college: '',
+                    edStart: '',
+                    edEnd: '',
+                    degrees: [],
+                    edInfo: [],
+                    extraInfo: []
+                }]
         }));
     };
 
@@ -361,7 +378,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
 
                 <div className='right-column'>
                     <h3>Education</h3>
-                    {resumeData.education.map((education, index) => (
+                    {resumeData.education?.map((education, index) => (
                         <div key={index}>
                             <input
                                 type='text'
@@ -420,7 +437,7 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
                     <button onClick={addEducation}>Add Education</button>
 
                     <h3>Employment</h3>
-                    {resumeData.employment.map((employment, index) => (
+                    {resumeData.employment?.map((employment, index) => (
                         <div key={index}>
                             <input
                                 type='text'
