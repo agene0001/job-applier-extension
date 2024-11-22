@@ -43,7 +43,10 @@ export interface openJobSite {
     xpLevel: string[]
 
 }
+export type qaFormat = {
+    [key: string]: any;
 
+};
 export interface ResumeData {
     name: string;
     address: string;

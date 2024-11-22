@@ -4,7 +4,7 @@ import Createprofile from './createprofile';
 import UploadDoc from './FileUploader';
 // import AppliedJobs from './AppliedJobs'; // Assume you have this component
 
-export type Page = 'home' | 'create-profile' | 'applied-jobs';
+export type Page = 'home' | 'create-profile' | 'applied-jobs'|"edit-job-info";
 
 const App: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -16,6 +16,9 @@ const App: React.FC = () => {
             case 'create-profile':
                 return <Createprofile setCurrentPage={setCurrentPage} />;
             case 'applied-jobs':
+                break;
+
+            case 'edit-job-info':
                 break;
             // return <AppliedJobs setCurrentPage={setCurrentPage} />;
             default:

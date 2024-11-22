@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import {Education, Employment, ResumeData, DriveUploadResponse, JobDetails} from '../src/types';
+import {Education, Employment, ResumeData, DriveUploadResponse, JobDetails, qaFormat} from '../src/types';
 import {DriveService} from "./drive-service";
 import PizZip from 'pizzip';
 
@@ -305,6 +305,95 @@ class DocFormatter {
 
 }
 
+// Question-answer storage
+class questionSaver {
+    private qaStorage: { [key: string]: string } = {}; // In-memory cache of QA pairs
+
+    constructor() {
+        this.loadFromStorage(); // Load data from Chrome storage on initialization
+    }
+
+    // Function to normalize a question
+    private normalizeQuestion(question: string) {
+        return question
+            .toLowerCase()
+            .replace(/[^\w\s]/g, "")
+            .split(" ")
+            .filter((word) => !["the", "a", "is", "of", "with", "do", "you", "have"].includes(word)) // Remove stopwords
+            .join(" ");
+    }
+
+    // Function to save a question-answer pair
+    public async saveQuestionAnswer(question: string, answer: string) {
+        const normalizedKey = this.normalizeQuestion(question);
+        this.qaStorage[normalizedKey] = answer;
+        console.log(`Saved: [${normalizedKey}] -> ${answer}`);
+        await this.saveToStorage(); // Persist data to Chrome storage
+    }
+
+    // Function to find an answer for a new question
+    public async findAnswer(question: string) {
+        const normalizedKey = this.normalizeQuestion(question);
+        const keys = Object.keys(this.qaStorage);
+
+        // Use a simple similarity check (or replace with Fuse.js for advanced matching)
+        let bestMatch: string | null = null;
+        let bestScore = 0;
+        keys.forEach((key) => {
+            const score = this.calculateSimilarity(normalizedKey, key); // Custom function
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = key;
+            }
+        });
+
+        if (bestMatch && bestScore > 0.8) {
+            return this.qaStorage[bestMatch];
+        }
+
+        return null;
+    }
+
+    // Simple similarity score function (replace with advanced algorithm as needed)
+    private calculateSimilarity(str1: string, str2: string) {
+        const set1 = new Set(str1.split(" "));
+        const set2 = new Set(str2.split(" "));
+        const intersection = [...set1].filter((word) => set2.has(word));
+        return intersection.length / Math.max(set1.size, set2.size);
+    }
+
+    // Load data from Chrome storage
+    private loadFromStorage() {
+        chrome.storage.local.get("qaStorage", (result: { qaStorage: { [key: string]: string; }; }) => {
+            if (result.qaStorage) {
+                this.qaStorage = result.qaStorage;
+                console.log("Loaded from storage:", this.qaStorage);
+            }
+        });
+    }
+
+    // Save data to Chrome storage
+    private async saveToStorage() {
+        return new Promise<void>((resolve) => {
+            chrome.storage.local.set({qaStorage: this.qaStorage}, () => {
+                console.log("Saved to storage:", this.qaStorage);
+                resolve();
+            });
+        });
+    }
+}
+
+const saver = new questionSaver();
+saver.saveQuestionAnswer("How many years of work experience do you have with Account Management?", "5");
+const question = "What is your experience in account management?";
+const answer = saver.findAnswer(question);
+
+if (answer) {
+    console.log(`Found answer: ${answer}`);
+} else {
+    console.log("No matching answer found.");
+}
+
 // Example usage
 
 const resumeFilePath = './jobApplier/resume_template.docx'; // Ensure the path is correct
@@ -409,7 +498,7 @@ chrome.runtime.onMessage.addListener((request: any, sender: any, sendResponse: a
     if (request.action === "runContentScript") {
         console.log("Content script activated!");
         // handlePage(); // Call your parsing function or any other actions
-        main(request.query,request.xpLevel)
+        main(request.query, request.xpLevel)
     } else {
         console.log("Unknown action:", request.action)
     }
@@ -564,6 +653,7 @@ to align with the job. You help tailor their experience to make a better resume 
 // Concrete Factories
 class LinkedInFacade extends facade {
     public docformater = new DocFormatter();
+    public saver = new questionSaver()
 
     getFacade(url: string) {
         if (url.includes("https://www.linkedin.com")) {
@@ -613,8 +703,7 @@ class LinkedInFacade extends facade {
                 if (jobsContainer.scrollHeight <= jobsContainer.scrollTop + jobsContainer.clientHeight) {
                     clearInterval(scrollInterval);
                     resolve(foundJobs);
-                }
-                else if(prevJobLen === currentJobCount) {
+                } else if (prevJobLen === currentJobCount) {
                     clearInterval(scrollInterval);
                     resolve(foundJobs);
                 }
@@ -638,7 +727,7 @@ class LinkedInFacade extends facade {
 
         const link: HTMLAnchorElement | null = job.querySelector("a ");
         let href = link?.href.match(/\/jobs\/view\/(\d+)\//);
-         let jobId = href ? href[1] : null;
+        let jobId = href ? href[1] : null;
         console.log(`Clicked job: ${link?.innerText}`);
         console.log(`Job URL: ${link?.href}`);
         console.log(`Job: ${link?.outerHTML}`);
@@ -809,6 +898,80 @@ class LinkedInFacade extends facade {
         });
     }
 
+    parseForm(form: HTMLFormElement) {
+        let sections = form.querySelectorAll(".jobs-easy-apply-form-section__grouping");
+
+        sections.forEach(async (section) => {
+            let label = section.querySelector("label");
+            let input: HTMLInputElement | null = section.querySelector("input");
+            let select = section.querySelector("select");
+
+            if (label) {
+                let labelText = label.innerText;
+                let answer = await saver.findAnswer(labelText)
+
+                if (answer) {
+                    if (input) {
+                        if (input.type === "number") {
+                            const numericValue = parseFloat(answer);
+                            if (!isNaN(numericValue)) {
+                                // Set the value
+                                input.value = numericValue.toString();
+
+                                // Dispatch multiple events to ensure proper validation
+                                const events = ['input', 'change', 'blur'];
+                                events.forEach(eventType => {
+                                    const event = new Event(eventType, {
+                                        bubbles: true, cancelable: true,
+                                    });
+                                    input?.dispatchEvent(event);
+                                });
+
+                                // Force validity check
+                                input.checkValidity();
+                            } else {
+                                console.warn(`Invalid numeric value for input: ${answer}`);
+                            }
+                        } else {
+                            input.value = answer;
+                            // Dispatch multiple events for non-numeric inputs as well
+                            ['input', 'change', 'blur'].forEach(eventType => {
+                                const event = new Event(eventType, {
+                                    bubbles: true, cancelable: true,
+                                });
+                                input?.dispatchEvent(event);
+                            });
+                        }
+                    } else if (select) {
+                        select.value = answer;
+                        // For select elements, dispatch both change and input events
+                        ['change', 'input'].forEach(eventType => {
+                            const event = new Event(eventType, {
+                                bubbles: true, cancelable: true,
+                            });
+                            select?.dispatchEvent(event);
+                        });
+                    }
+                } else {
+                    if (input && input?.value !== "") {
+                        await saver.saveQuestionAnswer(labelText, input.value);
+                    } else if (select && select?.value !== "" && select?.value.toLowerCase() !== "select an option") {
+                        await saver.saveQuestionAnswer(labelText, select.value);
+                    } else {
+                        if (select) {
+                            let optionsDom = select.querySelectorAll("option");
+                            answer = prompt(labelText+"\n"+ Array.from(optionsDom).map(option=>option.innerText).join("\n"));
+                        }
+                        else answer = prompt(labelText);
+
+                        if (answer) {
+                            await saver.saveQuestionAnswer(labelText, answer);
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     async parseJobs(jobs: Element[]): Promise<JobDetails[]> {
         return new Promise(async (resolve, reject) => {
@@ -819,135 +982,148 @@ class LinkedInFacade extends facade {
                 await chrome.storage.sync.get(['profiles'], async (result: any) => {
                     for (const job of jobElements) {
                         const jobDetails = await this.extractJobDetails(job as HTMLElement);
-                        const pattern = /```json\n([\s\S]*?)\n```/;
-                        let gptOutput;
-                        let gptJson: ResumeData | null = null;
-                        let result1 = await this.GPTParser(result.profiles, jobDetails)
-                        // console.log(result1)
-                        gptOutput = result1.match(pattern)[1]
-                        // console.log(gptOutput);
-                        // console.log(gptOutput);
 
-                        gptJson = JSON.parse(gptOutput);
-                        console.log(gptJson);
+                        // const applyBtn: HTMLButtonElement | null = document.querySelector(".jobs-apply-button--top-card > button");
+                        const applyBtn: HTMLButtonElement | null = await this.getApplyButton();
+                        console.log(applyBtn);
+                        if (applyBtn) {
+                            applyBtn.click();
+                            const pattern = /```json\n([\s\S]*?)\n```/;
+                            let gptOutput;
+                            let gptJson: ResumeData | null = null;
+                            let result1 = await this.GPTParser(result.profiles, jobDetails)
+                            // console.log(result1)
+                            gptOutput = result1.match(pattern)[1]
+                            // console.log(gptOutput);
+                            // console.log(gptOutput);
 
-                        let fileName;
-                        let fileId;
-                        if (gptJson && jobDetails.companyName && jobDetails.jobTitle) {
-                            let temp = await this.docformater.saveResume(gptJson, jobDetails.companyName, jobDetails.jobTitle)
-                            fileName = temp[1];
-                            fileId = temp[0].id;
+                            gptJson = JSON.parse(gptOutput);
+                            console.log(gptJson);
 
+                            let fileName;
+                            let fileId;
+                            if (gptJson && jobDetails.companyName && jobDetails.jobTitle) {
+                                let temp = await this.docformater.saveResume(gptJson, jobDetails.companyName, jobDetails.jobTitle)
+                                fileName = temp[1];
+                                fileId = temp[0].id;
+
+                                await delay(200);
+                            }
                             await delay(200);
 
-                            // const applyBtn: HTMLButtonElement | null = document.querySelector(".jobs-apply-button--top-card > button");
-                            const applyBtn: HTMLButtonElement | null = await this.getApplyButton();
-                            console.log(applyBtn);
-                            if (applyBtn) {
-                                applyBtn.click();
-                                await delay(200);
+                            while (true) {
+                                // await delay(5000);
 
-                                while (true) {
-                                    // await delay(5000);
+                                let modal = document.querySelector(".artdeco-modal");
+                                const modalContent = modal?.querySelector(".jobs-easy-apply-content");
+                                console.log(modalContent);
+                                let upload: HTMLButtonElement | null | undefined = modal?.querySelector(".js-jobs-document-upload__container");
+                                let uploadLabel: HTMLLabelElement | null | undefined = upload?.querySelector(".jobs-document-upload__upload-button");
 
-                                    let modal = document.querySelector(".artdeco-modal");
-                                    const modalContent = modal?.querySelector(".jobs-easy-apply-content");
-                                    console.log(modalContent);
-                                    let upload: HTMLButtonElement | null | undefined = modal?.querySelector(".js-jobs-document-upload__container");
-                                    let uploadLabel: HTMLLabelElement | null | undefined = upload?.querySelector(".jobs-document-upload__upload-button");
+                                let uploadInput: HTMLInputElement | null | undefined = upload?.querySelector("input");
 
-                                    let uploadInput: HTMLInputElement | null | undefined = upload?.querySelector("input");
-
-                                    if (uploadInput && uploadLabel && fileName && fileId) {
-                                        // chrome.runtime.sendMessage({type: 'GET_AUTH_TOKEN'}, (response: {
-                                        //     error: any;
-                                        //     token: any;
-                                        // }) => {
-                                        //     if (response.error) {
-                                        //         console.error('Error:', response.error);
-                                        //     } else {
-                                        //         // Store the token in chrome storage
-                                        //         chrome.storage.local.set({authToken: response.token}, () => {
-                                        //             console.log('Token saved successfully');
-                                        //         });
-                                        //     }
-                                        // });
-                                        await this.simulateFileUploadViaUrl(uploadInput, fileId, fileName, uploadLabel);
-                                        // await delay(100000)
-                                    }
-                                    const nextBtn: HTMLButtonElement | null | undefined = modal?.querySelector("button[data-easy-apply-next-button]");
-                                    // nextBtn?.click()
-                                    // upload?.click();
-                                    let submit: HTMLButtonElement | null | undefined;
-                                    let btnText = modal?.querySelectorAll('button span');
-                                    if (btnText) {
-                                        const reviewBtn = Array.from(btnText)
-                                            .find(span => span.textContent?.trim() === 'Review')
-                                            ?.closest('button');
-                                        reviewBtn?.click();
-                                        console.log("review button: " + reviewBtn);
-                                        submit = Array.from(btnText)
-                                            .find(span => span.textContent?.trim().toLowerCase() === 'submit application')
-                                            ?.closest('button');
-
-
-                                    }
-                                    // let closeBtn: NodeListOf<HTMLButtonElement> | undefined | null = modal?.querySelectorAll("button[aria-label=Dismiss]");
-                                    // console.log("upload btn: " + upload);
-                                    console.log("next button: " + nextBtn)
-                                    console.log(submit)
-
-                                    if (submit !== undefined && submit !== null) {
-                                        await chrome.runtime.onMessage.addListener(function (message: {
-                                            csrfToken: any;
-                                        }, sender: any, sendResponse: any) {
-                                            if (message.csrfToken) {
-                                                console.log('Received CSRF Token in content script:', message.csrfToken);
-                                                // You can now use the CSRF token in your form or requests
-                                            } else {
-                                                console.log('No token received');
-                                            }
-                                        });
-
-                                        submit?.click();
-                                        modal?.setAttribute('aria-hidden', 'true');
-
-                                        // while (true) {
-                                        //
-                                        //     closeBtn = modal?.querySelectorAll("button[aria-label=Dismiss]");
-                                        //     if (closeBtn) {
-                                        //
-                                        //         modal = document.querySelector(".artdeco-modal");
-                                        //
-                                        //     }
-                                        //     else{
-                                        //         modal = null;
-                                        //     }
-                                        //     if (modal == null) break;
-                                        // }
-                                        await delay(500)
-
-
-                                        // while(true){}
-                                        // setTimeout( ()=>{submit?.click();},5000)
-                                        break;
-
-                                    } else {
-                                        nextBtn?.click();
-                                        await delay(200);
-                                    }
-                                    if (!modal) {
-                                        break;
-                                    }
+                                if (uploadInput && uploadLabel && fileName && fileId) {
+                                    // chrome.runtime.sendMessage({type: 'GET_AUTH_TOKEN'}, (response: {
+                                    //     error: any;
+                                    //     token: any;
+                                    // }) => {
+                                    //     if (response.error) {
+                                    //         console.error('Error:', response.error);
+                                    //     } else {
+                                    //         // Store the token in chrome storage
+                                    //         chrome.storage.local.set({authToken: response.token}, () => {
+                                    //             console.log('Token saved successfully');
+                                    //         });
+                                    //     }
+                                    // });
+                                    await this.simulateFileUploadViaUrl(uploadInput, fileId, fileName, uploadLabel);
+                                    // await delay(100000)
                                 }
+                                const nextBtn: HTMLButtonElement | null | undefined = modal?.querySelector("button[data-easy-apply-next-button]");
+                                // nextBtn?.click()
+                                // upload?.click();
+                                let submit: HTMLButtonElement | null | undefined;
+                                let continueBtn: HTMLButtonElement | null | undefined;
+                                let btnText = modal?.querySelectorAll('button span');
+                                if (btnText) {
+                                    const reviewBtn = Array.from(btnText)
+                                        .find(span => span.textContent?.trim() === 'Review')
+                                        ?.closest('button');
+                                    reviewBtn?.click();
+                                    console.log("review button: " + reviewBtn);
+                                    submit = Array.from(btnText)
+                                        .find(span => span.textContent?.trim().toLowerCase() === 'submit application')
+                                        ?.closest('button');
+                                    continueBtn = Array.from(btnText)
+                                        .find(span => span.textContent?.trim().toLowerCase() === 'continue applying')
+                                        ?.closest('button');
 
-                                await delay(500)
-                                allJobDetails.push(jobDetails);
+
+                                }
+                                // let closeBtn: NodeListOf<HTMLButtonElement> | undefined | null = modal?.querySelectorAll("button[aria-label=Dismiss]");
+                                // console.log("upload btn: " + upload);
+                                console.log("next button: " + nextBtn)
+                                console.log(submit)
+                                let form = modal?.querySelector('form')
+                                console.log(form);
+                                if (form) {
+                                    console.log("parsing form");
+                                    this.parseForm(form);
+                                } else {
+                                    console.log("no form found")
+                                }
+                                if (submit !== undefined && submit !== null) {
+                                    await chrome.runtime.onMessage.addListener(function (message: {
+                                        csrfToken: any;
+                                    }, sender: any, sendResponse: any) {
+                                        if (message.csrfToken) {
+                                            console.log('Received CSRF Token in content script:', message.csrfToken);
+                                            // You can now use the CSRF token in your form or requests
+                                        } else {
+                                            console.log('No token received');
+                                        }
+                                    });
+
+                                    submit?.click();
+                                    modal?.setAttribute('aria-hidden', 'true');
+
+                                    // while (true) {
+                                    //
+                                    //     closeBtn = modal?.querySelectorAll("button[aria-label=Dismiss]");
+                                    //     if (closeBtn) {
+                                    //
+                                    //         modal = document.querySelector(".artdeco-modal");
+                                    //
+                                    //     }
+                                    //     else{
+                                    //         modal = null;
+                                    //     }
+                                    //     if (modal == null) break;
+                                    // }
+                                    await delay(500)
+
+
+                                    // while(true){}
+                                    // setTimeout( ()=>{submit?.click();},5000)
+                                    break;
+
+                                } else {
+                                    nextBtn?.click();
+                                    continueBtn?.click();
+                                    await delay(200);
+                                }
+                                if (!modal) {
+                                    break;
+                                }
                             }
 
-
-                            await delay(200);
+                            await delay(500)
+                            allJobDetails.push(jobDetails);
                         }
+
+
+                        await delay(200);
+
                     }
                 });
 
@@ -1017,7 +1193,7 @@ class LinkedInFacade extends facade {
 //     }
 // }
 
-async function main(query: string,xpLevel: string[]) {
+async function main(query: string, xpLevel: string[]) {
     let factory: CompositeFactory = new CompositeFactory();
     factory.addFactory(new LinkedInFacade());
 // factory.addFactory(new HandshakeFacade());
@@ -1034,19 +1210,10 @@ async function main(query: string,xpLevel: string[]) {
 
         let site = "linkedin"
         if (currentURL.includes("start=25")) await chrome.runtime.sendMessage({
-            action: "openJobSite",
-            site,
-            pageInd: ind + 50,
-            query: query,
-            xpLevel: xpLevel,
+            action: "openJobSite", site, pageInd: ind + 50, query: query, xpLevel: xpLevel,
         }); else if (!currentURL.includes("start=50")) await chrome.runtime.sendMessage({
-            action: "openJobSite",
-            site,
-            pageInd: ind + 25,
-            query: query,
-            xpLevel: xpLevel
+            action: "openJobSite", site, pageInd: ind + 25, query: query, xpLevel: xpLevel
         });
-
 
 
     }
