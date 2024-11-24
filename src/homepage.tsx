@@ -3,9 +3,7 @@ import Navbar from "./navbar";
 
 import { Page } from './App';
 import {ResumeData} from "./types"
-interface HomePageProps {
-    setCurrentPage: React.Dispatch<React.SetStateAction<Page>>;
-}
+
 
 // Function to handle page clicks and send messages to the background script
 
@@ -22,7 +20,7 @@ const initialState: ResumeData = {
     employment: [],
 };
 
-const HomePage: React.FC<HomePageProps> = ({ setCurrentPage }) => {
+const HomePage = () => {
     const [savedProfiles, setSavedProfiles] = useState<{ profileName: string; profileData: ResumeData }[]>([]);
     const [selectedProfileName, setSelectedProfileName] = useState<string>('');
     const [resumeData, setResumeData] = useState<ResumeData>(initialState);
@@ -63,8 +61,7 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage }) => {
     };
 
     return (
-        <div className='grid-container'>
-            <Navbar title='home' setCurrentPage={setCurrentPage} />
+        <div>
             <div className='main-section'>
                 <h1>Automatic Job Applier</h1>
                 <p>Create a profile to begin applying to jobs</p>

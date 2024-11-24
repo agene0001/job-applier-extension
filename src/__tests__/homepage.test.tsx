@@ -29,7 +29,7 @@ describe('HomePage Component', () => {
     });
 
     test('renders HomePage with initial elements', () => {
-        render(<HomePage setCurrentPage={setCurrentPage} />);
+        render(<HomePage />);
 
         expect(screen.getByText('Automatic Job Applier')).toBeInTheDocument();
         expect(screen.getByText('Create a profile to begin applying to jobs')).toBeInTheDocument();
@@ -47,10 +47,10 @@ describe('HomePage Component', () => {
         ];
         mockGet.mockImplementation((_, callback) => callback({ profiles }));
 
-        render(<HomePage setCurrentPage={setCurrentPage} />);
+        render(<HomePage />);
 
-        await waitFor(() => expect(screen.getByText('Profile 1')).toBeInTheDocument());
-        await waitFor(() => expect(screen.getByText('Profile 2')).toBeInTheDocument());
+        await screen.findByText('Profile 1');
+        await screen.findByText('Profile 2');
     });
 
     test('sets selected profile and updates resumeData', async () => {
@@ -59,8 +59,8 @@ describe('HomePage Component', () => {
         ];
         mockGet.mockImplementation((_, callback) => callback({ profiles }));
 
-        render(<HomePage setCurrentPage={setCurrentPage} />);
-        await waitFor(() => expect(screen.getByText('Profile 1')).toBeInTheDocument());
+        render(<HomePage  />);
+        await screen.findByText('Profile 1');
 
         fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Profile 1' } });
 
@@ -75,7 +75,7 @@ describe('HomePage Component', () => {
         const profiles = [{ profileName: 'Profile 1', profileData: {} as ResumeData }];
         mockGet.mockImplementation((_, callback) => callback({ profiles }));
 
-        render(<HomePage setCurrentPage={setCurrentPage} />);
+        render(<HomePage  />);
         fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Profile 1' } });
 
         fireEvent.click(screen.getByText('LinkedIn'));
@@ -89,7 +89,7 @@ describe('HomePage Component', () => {
 
     test('shows alert if no profile is selected on job site click', () => {
         global.alert = jest.fn();
-        render(<HomePage setCurrentPage={setCurrentPage} />);
+        render(<HomePage  />);
 
         fireEvent.click(screen.getByText('LinkedIn'));
         expect(global.alert).toHaveBeenCalledWith('Profile must be selected.');

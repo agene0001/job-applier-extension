@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import HomePage from './homepage';
 import Createprofile from './createprofile';
 import UploadDoc from './FileUploader';
+import Navbar from "./navbar";
+import EditJobInfo from "./editjobinfo";
 // import AppliedJobs from './AppliedJobs'; // Assume you have this component
 
 export type Page = 'home' | 'create-profile' | 'applied-jobs'|"edit-job-info";
@@ -12,23 +14,25 @@ const App: React.FC = () => {
     const renderPage = () => {
         switch (currentPage) {
             case 'home':
-                return <HomePage setCurrentPage={setCurrentPage} />;
+                return <HomePage />;
             case 'create-profile':
-                return <Createprofile setCurrentPage={setCurrentPage} />;
+                return <Createprofile  />;
             case 'applied-jobs':
                 break;
 
             case 'edit-job-info':
-                break;
+                return <EditJobInfo />;
             // return <AppliedJobs setCurrentPage={setCurrentPage} />;
             default:
-                return <HomePage setCurrentPage={setCurrentPage} />;
+                return <HomePage  />;
         }
     };
 
     return (
-        <div className="app-container">
-            {renderPage()}
+        <div className="app-container flex grid-container">
+            <Navbar title={currentPage} setCurrentPage={setCurrentPage} />
+
+                {renderPage()}
         </div>
     );
 };

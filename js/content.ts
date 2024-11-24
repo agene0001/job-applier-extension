@@ -17,6 +17,7 @@ import {
     BorderStyle,
     ExternalHyperlink
 } from "docx";
+import {questionSaver} from "./questionsaver";
 
 declare const chrome: any; // Declare chrome as a global variable for Chrome APIs
 dotenv.config();
@@ -305,94 +306,24 @@ class DocFormatter {
 
 }
 
-// Question-answer storage
-class questionSaver {
-    private qaStorage: { [key: string]: string } = {}; // In-memory cache of QA pairs
 
-    constructor() {
-        this.loadFromStorage(); // Load data from Chrome storage on initialization
-    }
 
-    // Function to normalize a question
-    private normalizeQuestion(question: string) {
-        return question
-            .toLowerCase()
-            .replace(/[^\w\s]/g, "")
-            .split(" ")
-            .filter((word) => !["the", "a", "is", "of", "with", "do", "you", "have"].includes(word)) // Remove stopwords
-            .join(" ");
-    }
 
-    // Function to save a question-answer pair
-    public async saveQuestionAnswer(question: string, answer: string) {
-        const normalizedKey = this.normalizeQuestion(question);
-        this.qaStorage[normalizedKey] = answer;
-        console.log(`Saved: [${normalizedKey}] -> ${answer}`);
-        await this.saveToStorage(); // Persist data to Chrome storage
-    }
 
-    // Function to find an answer for a new question
-    public async findAnswer(question: string) {
-        const normalizedKey = this.normalizeQuestion(question);
-        const keys = Object.keys(this.qaStorage);
 
-        // Use a simple similarity check (or replace with Fuse.js for advanced matching)
-        let bestMatch: string | null = null;
-        let bestScore = 0;
-        keys.forEach((key) => {
-            const score = this.calculateSimilarity(normalizedKey, key); // Custom function
-            if (score > bestScore) {
-                bestScore = score;
-                bestMatch = key;
-            }
-        });
 
-        if (bestMatch && bestScore > 0.8) {
-            return this.qaStorage[bestMatch];
-        }
 
-        return null;
-    }
 
-    // Simple similarity score function (replace with advanced algorithm as needed)
-    private calculateSimilarity(str1: string, str2: string) {
-        const set1 = new Set(str1.split(" "));
-        const set2 = new Set(str2.split(" "));
-        const intersection = [...set1].filter((word) => set2.has(word));
-        return intersection.length / Math.max(set1.size, set2.size);
-    }
-
-    // Load data from Chrome storage
-    private loadFromStorage() {
-        chrome.storage.local.get("qaStorage", (result: { qaStorage: { [key: string]: string; }; }) => {
-            if (result.qaStorage) {
-                this.qaStorage = result.qaStorage;
-                console.log("Loaded from storage:", this.qaStorage);
-            }
-        });
-    }
-
-    // Save data to Chrome storage
-    private async saveToStorage() {
-        return new Promise<void>((resolve) => {
-            chrome.storage.local.set({qaStorage: this.qaStorage}, () => {
-                console.log("Saved to storage:", this.qaStorage);
-                resolve();
-            });
-        });
-    }
-}
-
-const saver = new questionSaver();
-saver.saveQuestionAnswer("How many years of work experience do you have with Account Management?", "5");
-const question = "What is your experience in account management?";
-const answer = saver.findAnswer(question);
-
-if (answer) {
-    console.log(`Found answer: ${answer}`);
-} else {
-    console.log("No matching answer found.");
-}
+// const saver = new questionSaver();
+// await saver.saveQuestionAnswer("How many years of work experience do you have with Account Management?", "5");
+// const question = "What is your experience in account management?";
+// const answer = saver.findAnswer(question);
+//
+// if (answer) {
+//     console.log(`Found answer: ${answer}`);
+// } else {
+//     console.log("No matching answer found.");
+// }
 
 // Example usage
 
@@ -455,6 +386,10 @@ const resumeData: ResumeData = {
 
 
 console.log("Content script loaded!");
+
+
+
+
 const apiKey = process.env.OPENAI_API_KEY;
 // downloadResume()
 
@@ -492,12 +427,36 @@ const apiKey = process.env.OPENAI_API_KEY;
 //         console.log("No response received.");
 //     }
 // });
-
+// function createPopup(){        // Create a popup element
+//     const popup = document.createElement("div");
+//     popup.style.position = "fixed";
+//     popup.style.bottom = "20px";
+//     popup.style.right = "20px";
+//     popup.style.backgroundColor = "#fff";
+//     popup.style.border = "1px solid #ccc";
+//     popup.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.1)";
+//     popup.style.padding = "15px";
+//     popup.style.borderRadius = "8px";
+//     popup.style.zIndex = "99999999";
+//     popup.innerHTML = `
+//             <strong>Job Search Info:</strong>
+// <!--            <p>Query: query</p>-->
+// <!--            <p>Experience Level: xpLevel.length > 0 ? xpLevel.join(", ") : "Any"</p>-->
+//             <button id="closePopup" style="margin-top: 10px; padding: 5px 10px; background: #0073e6; color: #fff; border: none; border-radius: 5px;">Close</button>
+//         `;
+//
+//     document.body.appendChild(popup);
+//
+//     // Add a close button event listener
+//     document.getElementById("closePopup")?.addEventListener("click", () => {
+//         popup.remove();
+//     });}
 chrome.runtime.onMessage.addListener((request: any, sender: any, sendResponse: any) => {
     console.log("message: " + request.action)
     if (request.action === "runContentScript") {
         console.log("Content script activated!");
         // handlePage(); // Call your parsing function or any other actions
+        // createPopup();
         main(request.query, request.xpLevel)
     } else {
         console.log("Unknown action:", request.action)
@@ -663,7 +622,7 @@ class LinkedInFacade extends facade {
 
     getJobs(): Promise<Element[]> {
         return new Promise((resolve, reject) => {
-            const jobsContainer = document.querySelector(".jobs-search-results-list");
+            const jobsContainer = document.querySelector("ul.scaffold-layout__list-container");
             if (!jobsContainer) {
                 console.log("Jobs container not found.");
                 reject("No jobs found.");
@@ -674,7 +633,7 @@ class LinkedInFacade extends facade {
             const jobIds = new Set();
 
             const logJobs = () => {
-                const jobs = document.querySelectorAll(".scaffold-layout__list-container > li");
+                const jobs = jobsContainer.querySelectorAll("li");
                 console.log(`Total jobs found: ${jobs.length}`);
 
                 jobs.forEach(job => {
@@ -898,17 +857,17 @@ class LinkedInFacade extends facade {
         });
     }
 
-    parseForm(form: HTMLFormElement) {
+    async parseForm(form: HTMLFormElement) {
         let sections = form.querySelectorAll(".jobs-easy-apply-form-section__grouping");
 
-        sections.forEach(async (section) => {
+        for (const section of sections) {
             let label = section.querySelector("label");
             let input: HTMLInputElement | null = section.querySelector("input");
             let select = section.querySelector("select");
 
             if (label) {
                 let labelText = label.innerText;
-                let answer = await saver.findAnswer(labelText)
+                let answer = await this.saver.findAnswer(labelText)
 
                 if (answer) {
                     if (input) {
@@ -954,23 +913,26 @@ class LinkedInFacade extends facade {
                     }
                 } else {
                     if (input && input?.value !== "") {
-                        await saver.saveQuestionAnswer(labelText, input.value);
+                        await this.saver.saveQuestionAnswer(labelText, input.value);
                     } else if (select && select?.value !== "" && select?.value.toLowerCase() !== "select an option") {
-                        await saver.saveQuestionAnswer(labelText, select.value);
+                        await this.saver.saveQuestionAnswer(labelText, select.value);
                     } else {
                         if (select) {
                             let optionsDom = select.querySelectorAll("option");
+                            // Example usage
                             answer = prompt(labelText+"\n"+ Array.from(optionsDom).map(option=>option.innerText).join("\n"));
                         }
-                        else answer = prompt(labelText);
-
+                        else {
+                            answer = prompt(labelText);
+                        }
+                        console.log(answer);
                         if (answer) {
-                            await saver.saveQuestionAnswer(labelText, answer);
+                            await this.saver.saveQuestionAnswer(labelText, answer);
                         }
                     }
                 }
             }
-        });
+        }
     }
 
     async parseJobs(jobs: Element[]): Promise<JobDetails[]> {
@@ -1068,7 +1030,7 @@ class LinkedInFacade extends facade {
                                 console.log(form);
                                 if (form) {
                                     console.log("parsing form");
-                                    this.parseForm(form);
+                                    await this.parseForm(form);
                                 } else {
                                     console.log("no form found")
                                 }

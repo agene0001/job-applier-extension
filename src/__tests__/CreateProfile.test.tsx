@@ -23,7 +23,7 @@ describe('CreateProfile Component', () => {
     });
 
     test('renders CreateProfile component with initial elements', () => {
-        render(<CreateProfile setCurrentPage={setCurrentPage} />);
+        render(<CreateProfile  />);
 
         // Check for main input fields
         expect(screen.getByPlaceholderText('Name')).toBeInTheDocument();
@@ -42,13 +42,13 @@ describe('CreateProfile Component', () => {
         const profiles = [{ profileName: 'Test Profile', profileData: {} }];
         (chrome.storage.sync.get as jest.Mock).mockImplementation((keys: string[], callback: (items: { profiles: any[] }) => void) => callback({ profiles }));
 
-        render(<CreateProfile setCurrentPage={setCurrentPage} />);
+        render(<CreateProfile />);
 
-        await waitFor(() => expect(screen.getByText('Test Profile')).toBeInTheDocument());
+        await screen.findByText('Test Profile');
     });
 
     test('updates state when input fields change', () => {
-        render(<CreateProfile setCurrentPage={setCurrentPage} />);
+        render(<CreateProfile  />);
 
         // Simulate typing in fields
         fireEvent.change(screen.getByPlaceholderText('Name'), { target: { value: 'John Doe' } });
@@ -60,7 +60,7 @@ describe('CreateProfile Component', () => {
     });
 
     test('adds education entry', () => {
-        render(<CreateProfile setCurrentPage={setCurrentPage} />);
+        render(<CreateProfile />);
 
         // Click 'Add Education' button
         fireEvent.click(screen.getByText('Add Education'));
@@ -70,7 +70,7 @@ describe('CreateProfile Component', () => {
     });
 
     test('saves a new profile', () => {
-        render(<CreateProfile setCurrentPage={setCurrentPage} />);
+        render(<CreateProfile  />);
 
         // Set profile name and fill in a field
         fireEvent.change(screen.getByPlaceholderText('Profile Name'), { target: { value: 'My New Profile' } });
@@ -90,10 +90,10 @@ describe('CreateProfile Component', () => {
         const profiles = [{ profileName: 'Test Profile', profileData: {} }];
         (chrome.storage.sync.get as jest.Mock).mockImplementation((keys: string[], callback: (items: { profiles: any[] }) => void) => callback({ profiles }));
 
-        render(<CreateProfile setCurrentPage={setCurrentPage} />);
+        render(<CreateProfile />);
 
         // Wait for profiles to load
-        await waitFor(() => expect(screen.getByText('Test Profile')).toBeInTheDocument());
+        await screen.findByText('Test Profile');
 
         // Select profile and delete
         fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Test Profile' } });

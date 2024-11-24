@@ -4,10 +4,6 @@ import UploadDoc from "./FileUploader";
 import { Page } from './App';
 import LZString from 'lz-string';
 import {ResumeData} from "./types"
-export interface CreateProfileProps {
-    setCurrentPage: React.Dispatch<React.SetStateAction<Page>>;
-}
-
 
 
 const initialState: ResumeData = {
@@ -22,7 +18,7 @@ const initialState: ResumeData = {
     employment: [],
 };
 
-const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
+const CreateProfile = () => {
     const [resumeData, setResumeData] = useState<ResumeData>(initialState);
     const [profileName, setProfileName] = useState<string>('');
     const [selectedProfileName, setSelectedProfileName] = useState<string>('');
@@ -297,9 +293,8 @@ const CreateProfile: React.FC<CreateProfileProps> = ({ setCurrentPage }) => {
 
     // @ts-ignore
     return (
-        <div className='grid-container'>
-            <Navbar title='createpage' setCurrentPage={setCurrentPage} />
-            <div className='grid-container1'>
+        <div>
+         <div className='grid-container1'>
                 <div className='left-column'>
                     <h1>Create a Profile</h1>
                     <p>Start By Adding in Resume Information then give any background/coursework relevant to the job

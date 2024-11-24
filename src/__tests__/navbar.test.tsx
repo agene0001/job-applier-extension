@@ -27,7 +27,7 @@ describe('Navbar Component', () => {
     });
 
     test('sets active class based on title prop', () => {
-        render(<Navbar title="createpage" setCurrentPage={setCurrentPage} />);
+        render(<Navbar title="create-profile" setCurrentPage={setCurrentPage} />);
 
         // Check the active state class for Create Profile
         expect(screen.getByText('Home')).not.toHaveClass('border-5 border-black');
