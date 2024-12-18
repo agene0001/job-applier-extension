@@ -67,19 +67,26 @@ const HomePage = () => {
                 <p>Create a profile to begin applying to jobs</p>
                 <h2>Selected Profile: None</h2>
                 <h2>Saved Profiles:</h2>
+
+                <label>Apply (please have window in full screen)</label>
                 <select onChange={handleProfileSelect} value={selectedProfileName}>
                     <option value="" disabled>Select a saved profile</option>
                     {savedProfiles.map((profile, index) => (
                         <option key={index} value={profile.profileName}>{profile.profileName}</option>))}
                 </select>
-                <label>Apply (please have window in full screen)</label>
-                <label htmlFor="experience">Choose an experience option option:</label>
-                <select multiple id="experience" name="options"
-                        onChange={(event) => {
-                    const selectedValues = Array.from(event.target.selectedOptions, (option) => option.value);
-                    setExperienceLevel(selectedValues); // Update state with selected values
-                }} value={experienceLevel}>
-                    <option value="" disabled selected>Select an option</option>
+
+                <select
+                    multiple
+                    id="experience"
+                    name="options"
+                    onChange={(event) => {
+                        const selectedValues = Array.from(event.target.selectedOptions, (option) => option.value);
+                        setExperienceLevel(selectedValues); // Update state with selected values
+                    }}
+                    value={experienceLevel}
+                >
+                    <option value="" disabled>Select an option</option>
+                    {/* This line isn't needed for multiple selects */}
                     <option value="1">Internship</option>
                     <option value="2">Entry Level</option>
                     <option value="3">Associate</option>
@@ -87,6 +94,7 @@ const HomePage = () => {
                     <option value="5">Director</option>
                     <option value="6">Executive</option>
                 </select>
+
                 <div className='job-board-section'>
                     <button className='btn btn-primary' onClick={() => pageClick("linkedin")}>LinkedIn</button>
                     <button className='btn btn-primary' onClick={() => pageClick("indeed")}>Indeed</button>

@@ -622,7 +622,7 @@ class LinkedInFacade extends facade {
 
     getJobs(): Promise<Element[]> {
         return new Promise((resolve, reject) => {
-            const jobsContainer = document.querySelector("ul.scaffold-layout__list-container");
+            const jobsContainer = document.querySelector(".scaffold-layout__list");
             if (!jobsContainer) {
                 console.log("Jobs container not found.");
                 reject("No jobs found.");
