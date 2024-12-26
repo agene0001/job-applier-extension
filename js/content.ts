@@ -511,7 +511,6 @@ class facade {
         if (new.target === facade) {
             throw new TypeError("Cannot construct Facade instances directly");
         }
-        // this.currentURL = currentURL;
     }
 
     getFacade(url: string) {
@@ -596,7 +595,7 @@ to align with the job. You help tailor their experience to make a better resume 
         return data.choices[0].message.content;
     }
 
-    getJobs(): Promise<Element[]> {
+    getJobs(url:string): Promise<Element[]> {
         throw new Error("Method getJobs() not implemented.");
     }
 
@@ -613,7 +612,6 @@ to align with the job. You help tailor their experience to make a better resume 
 class LinkedInFacade extends facade {
     public docformater = new DocFormatter();
     public saver = new questionSaver()
-
     getFacade(url: string) {
         if (url.includes("https://www.linkedin.com")) {
             return this
@@ -695,19 +693,25 @@ class LinkedInFacade extends facade {
             // Parse the current URL
             const url = new URL(window.location.href);
 
-            // Set the new currentJobId without changing anything else
-            url.searchParams.set("currentJobId", jobId);
+            // Only update the URL if the jobId is different from the current one
+            if (url.searchParams.get("currentJobId") !== jobId) {
+                // Set the new currentJobId without changing anything else
+                url.searchParams.set("currentJobId", jobId);
 
-            // Update the browser's URL without reloading the page
-            window.history.pushState(null, "", url.toString());
+                // Update the browser's URL without reloading the page
+                window.history.pushState(null, "", url.toString());
 
-            // Manually trigger the 'popstate' event to notify the page of the change
-            const popstateEvent = new PopStateEvent("popstate");
-            window.dispatchEvent(popstateEvent);
-            console.log(`Updated URL to job: ${url.toString()}`);
+                // Manually trigger the 'popstate' event to notify the page of the change
+                const popstateEvent = new PopStateEvent("popstate");
+                window.dispatchEvent(popstateEvent);
+                console.log(`Updated URL to job: ${url.toString()}`);
+            } else {
+                console.log("currentJobId is the same, no update needed.");
+            }
         } else {
             console.log("Job ID not found.");
         }
+
         // Wait for the page to load before attempting to fetch the company name
         await delay(200);  // Delay of 2 seconds to ensure the page loads
 
@@ -1082,8 +1086,6 @@ class LinkedInFacade extends facade {
                             await delay(500)
                             allJobDetails.push(jobDetails);
                         }
-
-
                         await delay(200);
 
                     }
@@ -1162,11 +1164,14 @@ async function main(query: string, xpLevel: string[]) {
 // factory.addFactory(new IndeedFacade());
 // Client Code
     const currentURL = window.location.href;
+
+
+
     const jobBoardFacade = factory.createFacade(currentURL);
     let ind = 0
     if (jobBoardFacade) {
         // jobBoardFacade.modifyPage();
-        let jobs: Element[] = await jobBoardFacade.getJobs();
+        let jobs: Element[] = await jobBoardFacade.getJobs(currentURL);
         await jobBoardFacade.parseJobs(jobs);
         // jobs = await jobBoardFacade.getJobs()
 

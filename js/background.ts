@@ -51,6 +51,11 @@ function openOAuthPopup() {
 function generateRandomState() {
     return Math.random().toString(36).substring(2);
 }
+
+
+
+
+
 function exchangeAuthCodeForToken(authCode: string) {
     const clientId = '86y4n3pza7cs0g';
     const clientSecret = 'WPL_AP1.mSEQ98SZRLU6poyo.hYI+9A==';
@@ -67,7 +72,9 @@ function exchangeAuthCodeForToken(authCode: string) {
     fetch(url, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+
         },
         body: params.toString()
     })

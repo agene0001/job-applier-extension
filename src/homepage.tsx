@@ -63,7 +63,7 @@ const HomePage = () => {
     return (
         <div>
             <div className='main-section'>
-                <h1>Automatic Job Applier</h1>
+                <h1>CareerClicker</h1>
                 <p>Create a profile to begin applying to jobs</p>
                 <h2>Selected Profile: None</h2>
                 <h2>Saved Profiles:</h2>

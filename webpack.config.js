@@ -58,8 +58,8 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                { from: "./public/manifest.json", to: ""},{ from: "./public/jobApplier", to: "jobApplier"},  // Copy manifest to root of 'dist'
-                // { from: "./public/static", to: "static" },  // Copy static assets if needed
+                { from: "./public/manifest.json", to: ""},{ from: "./public/jobApplier", to: "jobApplier"},{ from: "./public/rules.json", to: ""},  // Copy manifest to root of 'dist'
+                { from: "./public/static", to: "static" },  // Copy static assets if needed
             ],
         }),
         new webpack.ProvidePlugin({
