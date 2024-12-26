@@ -103,5 +103,3 @@ Coming soon!
 Start applying to your dream jobs today! 🚀
 
 ---
-
-Feel free to modify the placeholder fields (`your-repo-name`, screenshots section, etc.) as needed.
