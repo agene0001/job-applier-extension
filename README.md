@@ -1,8 +1,6 @@
-Here’s a professional and engaging README file for your Chrome extension:
 
----
 
-# 🚀 Automatic Job Applier Extension
+# 🚀 Career Clicker - An automatic job applier 
 
 **Version 1.0**
 
